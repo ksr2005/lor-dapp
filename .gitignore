@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+.appdata/
+.localappdata/
+
+# Hardhat files
+artifacts/
+cache/
+typechain/
+typechain-types/
+
+# Frontend build
+frontend/dist/
+frontend/build/
+
+# IDE / System
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
