@@ -161,6 +161,11 @@ contract LetterOfRecommendation {
         Student storage s = students[_studentId];
 
         require(
+            msg.sender == s.studentAddress,
+            "Only the student can request a recommendation"
+        );
+
+        require(
             s.status == RequestStatus.None,
             "Recommendation already requested or approved"
         );
@@ -258,3 +263,4 @@ contract LetterOfRecommendation {
         return allStudents;
     }
 }
+

@@ -19,6 +19,10 @@ typechain-types/
 frontend/dist/
 frontend/build/
 
+# Zips and Submission copies
+LoR-DApp-Submission.zip
+LoR-DApp-Submission/
+
 # IDE / System
 .vscode/
 .idea/

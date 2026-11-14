@@ -139,20 +139,26 @@ describe("LetterOfRecommendation Smart Contract", function () {
       expect(student.recommendationApproved).to.be.false;
     });
 
+    it("should revert if caller is not the registered student", async function () {
+      await expect(
+        lor.connect(otherUser).requestRecommendation(1n)
+      ).to.be.revertedWith("Only the student can request a recommendation");
+    });
+
     it("should revert if student ID does not exist", async function () {
       await expect(
-        lor.requestRecommendation(999n)
+        lor.connect(studentWallet).requestRecommendation(999n)
       ).to.be.revertedWith("Student ID does not exist");
 
       await expect(
-        lor.requestRecommendation(0n)
+        lor.connect(studentWallet).requestRecommendation(0n)
       ).to.be.revertedWith("Student ID does not exist");
     });
 
     it("should revert if recommendation is already requested", async function () {
-      await lor.requestRecommendation(1n);
+      await lor.connect(studentWallet).requestRecommendation(1n);
       await expect(
-        lor.requestRecommendation(1n)
+        lor.connect(studentWallet).requestRecommendation(1n)
       ).to.be.revertedWith("Recommendation already requested or approved");
     });
   });
@@ -227,6 +233,24 @@ describe("LetterOfRecommendation Smart Contract", function () {
   });
 
   describe("View Functions & Helpers", function () {
+    it("should return student details matching getStudent() signature", async function () {
+      await lor.connect(studentWallet).addStudent("Alice", "CS", "alice@example.com");
+      await lor.connect(studentWallet).requestRecommendation(1n);
+      await lor.authorizeApprover(approver1.address);
+      await lor.connect(approver1).approveRecommendationWithIpfs(1n, "ipfs://testCID");
+
+      const student = await lor.getStudent(1n);
+      expect(student.id).to.equal(1n);
+      expect(student.name).to.equal("Alice");
+      expect(student.course).to.equal("CS");
+      expect(student.email).to.equal("alice@example.com");
+      expect(student.studentAddress).to.equal(studentWallet.address);
+      expect(student.recommendationRequested).to.be.true;
+      expect(student.recommendationApproved).to.be.true;
+      expect(student.approvedBy).to.equal(approver1.address);
+      expect(student.ipfsHash).to.equal("ipfs://testCID");
+    });
+
     it("should return all students correctly using getAllStudents()", async function () {
       await lor.addStudent("Student A", "Math", "a@test.com");
       await lor.addStudent("Student B", "Physics", "b@test.com");
@@ -246,3 +270,4 @@ describe("LetterOfRecommendation Smart Contract", function () {
     });
   });
 });
+

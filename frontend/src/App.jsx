@@ -38,7 +38,7 @@ export default function App() {
   const [isApprover, setIsApprover] = useState(false);
 
   // App UI state
-  const [activeTab, setActiveTab] = useState('students'); // 'students' | 'add' | 'request' | 'approve' | 'admin'
+  const [activeTab, setActiveTab] = useState('students'); // 'students' | 'lookup' | 'add' | 'request' | 'approve' | 'admin'
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState({ type: '', text: '', txHash: '' });
@@ -49,8 +49,13 @@ export default function App() {
   // Form states
   const [addForm, setAddForm] = useState({ name: '', course: '', email: '' });
   const [requestId, setRequestId] = useState('');
-  const [approveForm, setApproveForm] = useState({ studentId: '', ipfsHash: '', customNote: '' });
+  const [approveForm, setApproveForm] = useState({ studentId: '', ipfsHash: '' });
   const [adminForm, setAdminForm] = useState({ approverAddress: '', deauthorizeAddress: '' });
+
+  // Lookup state for getStudent()
+  const [lookupId, setLookupId] = useState('');
+  const [lookupResult, setLookupResult] = useState(null);
+  const [lookupLoading, setLookupLoading] = useState(false);
 
   // Initialize Ethers and Contract
   const initContract = useCallback(async (signerOrProvider, addr) => {
@@ -115,7 +120,6 @@ export default function App() {
         params: [{ chainId: SEPOLIA_CHAIN_ID }],
       });
     } catch (switchError) {
-      // Chain not added to MetaMask yet
       if (switchError.code === 4902) {
         try {
           await window.ethereum.request({
@@ -274,8 +278,7 @@ export default function App() {
       setLoading(true);
       setStatusMessage({ type: 'info', text: `Approving recommendation for Student ID #${id}...` });
 
-      const ipfsValue = approveForm.ipfsHash.trim() ||
-        (approveForm.customNote ? `ipfs://simulated-${encodeURIComponent(approveForm.customNote.slice(0, 20))}` : '');
+      const ipfsValue = approveForm.ipfsHash.trim();
 
       let tx;
       if (ipfsValue) {
@@ -296,7 +299,7 @@ export default function App() {
         text: `Recommendation for Student #${id} successfully approved on-chain!`,
         txHash: tx.hash,
       });
-      setApproveForm({ studentId: '', ipfsHash: '', customNote: '' });
+      setApproveForm({ studentId: '', ipfsHash: '' });
       await refreshData();
       setActiveTab('students');
     } catch (err) {
@@ -307,6 +310,40 @@ export default function App() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Action: Direct call to contract.getStudent(id)
+  const handleLookupStudent = async (idToLook) => {
+    const id = idToLook !== undefined ? idToLook : lookupId;
+    if (!contract || !id) return;
+    try {
+      setLookupLoading(true);
+      const res = await contract.getStudent(id);
+      setLookupResult({
+        id: Number(res.id),
+        name: res.name,
+        course: res.course,
+        email: res.email,
+        studentAddress: res.studentAddress,
+        recommendationRequested: res.recommendationRequested,
+        recommendationApproved: res.recommendationApproved,
+        approvedBy: res.approvedBy,
+        ipfsHash: res.ipfsHash,
+      });
+      setStatusMessage({
+        type: 'success',
+        text: `Successfully fetched Student #${id} using contract.getStudent()`,
+      });
+    } catch (err) {
+      console.error(err);
+      setLookupResult(null);
+      setStatusMessage({
+        type: 'error',
+        text: err?.reason || err?.message || `Failed to fetch details for Student #${id}`,
+      });
+    } finally {
+      setLookupLoading(false);
     }
   };
 
@@ -382,11 +419,12 @@ export default function App() {
     return <span className="badge badge-neutral">Not Requested</span>;
   };
 
+  // Only return external Etherscan link if on Sepolia Testnet
   const getExplorerTxUrl = (txHash) => {
     if (chainId === SEPOLIA_CHAIN_ID) {
       return `https://sepolia.etherscan.io/tx/${txHash}`;
     }
-    return `https://etherscan.io/tx/${txHash}`;
+    return null;
   };
 
   return (
@@ -450,7 +488,7 @@ export default function App() {
               target="_blank"
               rel="noreferrer"
               style={{ color: '#38bdf8', marginLeft: '4px' }}
-              title="View on Etherscan"
+              title="View on Sepolia Etherscan"
             >
               <ExternalLink size={14} />
             </a>
@@ -483,14 +521,20 @@ export default function App() {
             <p>{statusMessage.text}</p>
             {statusMessage.txHash && (
               <p style={{ marginTop: '0.25rem' }}>
-                <a
-                  href={getExplorerTxUrl(statusMessage.txHash)}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{ color: 'inherit', textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                >
-                  View transaction: {statusMessage.txHash.slice(0, 10)}... <ExternalLink size={12} />
-                </a>
+                {getExplorerTxUrl(statusMessage.txHash) ? (
+                  <a
+                    href={getExplorerTxUrl(statusMessage.txHash)}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ color: 'inherit', textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    View on Sepolia Etherscan: {statusMessage.txHash.slice(0, 10)}... <ExternalLink size={12} />
+                  </a>
+                ) : (
+                  <span className="mono" style={{ fontSize: '0.82rem', opacity: 0.85 }}>
+                    Tx Hash: {statusMessage.txHash}
+                  </span>
+                )}
               </p>
             )}
           </div>
@@ -511,6 +555,13 @@ export default function App() {
         >
           <Users size={16} />
           All Students ({students.length})
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'lookup' ? 'active' : ''}`}
+          onClick={() => setActiveTab('lookup')}
+        >
+          <Search size={16} />
+          Lookup Student (getStudent)
         </button>
         <button
           className={`tab-btn ${activeTab === 'add' ? 'active' : ''}`}
@@ -544,14 +595,14 @@ export default function App() {
         )}
       </nav>
 
-      {/* TAB 1: ALL STUDENTS LIST & VERIFICATION */}
+      {/* TAB 1: ALL STUDENTS LIST & DIRECTORY */}
       {activeTab === 'students' && (
         <section className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
+          <div style={{ display: 'flex', justifySelf: 'space-between', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
             <div>
               <h2 className="card-title">Registered Students & Recommendations</h2>
               <p className="card-desc" style={{ marginBottom: 0 }}>
-                Explore registered students, check LoR status, or verify issued recommendation certificates on-chain.
+                Explore registered students, check LoR status, or look up details on-chain.
               </p>
             </div>
 
@@ -600,7 +651,7 @@ export default function App() {
                 {filteredStudents.length === 0 ? (
                   <tr>
                     <td colSpan="7" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-                      No students found matching the criteria. Click "Add Student" to create a new record.
+                      No students found. Click "Add Student" to register a new record.
                     </td>
                   </tr>
                 ) : (
@@ -616,11 +667,22 @@ export default function App() {
                       <td>{getStatusBadge(s.status)}</td>
                       <td>
                         <div style={{ display: 'flex', gap: '0.4rem' }}>
-                          {s.status === 0 && (
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => {
+                              setLookupId(s.id.toString());
+                              handleLookupStudent(s.id);
+                              setActiveTab('lookup');
+                            }}
+                            title="Query getStudent() on-chain"
+                          >
+                            <Search size={12} /> Details
+                          </button>
+                          {s.status === 0 && account.toLowerCase() === s.studentAddress.toLowerCase() && (
                             <button
                               className="btn btn-primary btn-sm"
                               onClick={() => handleRequestRecommendation(s.id)}
-                              disabled={loading || !account}
+                              disabled={loading}
                               title="Request Recommendation"
                             >
                               <Send size={12} /> Request
@@ -645,7 +707,7 @@ export default function App() {
                               onClick={() => setSelectedStudentForCert(s)}
                               title="View Verified Certificate"
                             >
-                              <FileText size={12} /> View LoR
+                              <FileText size={12} /> Certificate
                             </button>
                           )}
                         </div>
@@ -659,7 +721,85 @@ export default function App() {
         </section>
       )}
 
-      {/* TAB 2: ADD STUDENT */}
+      {/* TAB 2: LOOKUP STUDENT (CALLS getStudent directly) */}
+      {activeTab === 'lookup' && (
+        <section className="card" style={{ maxWidth: '680px', margin: '0 auto' }}>
+          <h2 className="card-title">
+            <Search size={22} color="var(--primary)" />
+            Query Student Details (`getStudent`)
+          </h2>
+          <p className="card-desc">
+            Calls the smart contract's <code>getStudent(uint studentId)</code> view function directly and displays the on-chain return values.
+          </p>
+
+          <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem' }}>
+            <input
+              type="number"
+              min="1"
+              placeholder="Enter Student ID (e.g. 1)"
+              className="form-input mono"
+              value={lookupId}
+              onChange={(e) => setLookupId(e.target.value)}
+            />
+            <button
+              className="btn btn-primary"
+              onClick={() => handleLookupStudent()}
+              disabled={lookupLoading || !lookupId || !contract}
+            >
+              {lookupLoading ? <div className="spinner" /> : <Search size={16} />}
+              Fetch
+            </button>
+          </div>
+
+          {lookupResult && (
+            <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '1.25rem' }}>
+              <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', color: '#38bdf8' }}>
+                On-Chain Record: #{lookupResult.id} - {lookupResult.name}
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.88rem' }}>
+                <div>
+                  <span style={{ color: 'var(--text-muted)' }}>Course: </span>
+                  <strong>{lookupResult.course}</strong>
+                </div>
+                <div>
+                  <span style={{ color: 'var(--text-muted)' }}>Email: </span>
+                  <strong>{lookupResult.email}</strong>
+                </div>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Student Address: </span>
+                  <span className="mono" style={{ color: '#cbd5e1' }}>{lookupResult.studentAddress}</span>
+                </div>
+                <div>
+                  <span style={{ color: 'var(--text-muted)' }}>Recommendation Requested: </span>
+                  <span style={{ color: lookupResult.recommendationRequested ? '#34d399' : '#94a3b8' }}>
+                    {lookupResult.recommendationRequested ? 'true' : 'false'}
+                  </span>
+                </div>
+                <div>
+                  <span style={{ color: 'var(--text-muted)' }}>Recommendation Approved: </span>
+                  <span style={{ color: lookupResult.recommendationApproved ? '#34d399' : '#94a3b8' }}>
+                    {lookupResult.recommendationApproved ? 'true' : 'false'}
+                  </span>
+                </div>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Approved By: </span>
+                  <span className="mono" style={{ color: lookupResult.approvedBy === ethers.ZeroAddress ? '#64748b' : '#34d399' }}>
+                    {lookupResult.approvedBy === ethers.ZeroAddress ? 'Not approved yet (0x0)' : lookupResult.approvedBy}
+                  </span>
+                </div>
+                {lookupResult.ipfsHash && (
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Attached IPFS CID: </span>
+                    <span className="mono" style={{ color: '#38bdf8', wordBreak: 'break-all' }}>{lookupResult.ipfsHash}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* TAB 3: ADD STUDENT */}
       {activeTab === 'add' && (
         <section className="card" style={{ maxWidth: '600px', margin: '0 auto' }}>
           <h2 className="card-title">
@@ -676,7 +816,7 @@ export default function App() {
               <input
                 type="text"
                 required
-                placeholder="e.g. Sriharsha Reddy"
+                placeholder="e.g. Alice Johnson"
                 className="form-input"
                 value={addForm.name}
                 onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
@@ -688,7 +828,7 @@ export default function App() {
               <input
                 type="text"
                 required
-                placeholder="e.g. Master of Science in Web3 & Distributed Systems"
+                placeholder="e.g. Computer Science & Web3"
                 className="form-input"
                 value={addForm.course}
                 onChange={(e) => setAddForm({ ...addForm, course: e.target.value })}
@@ -700,7 +840,7 @@ export default function App() {
               <input
                 type="email"
                 required
-                placeholder="e.g. student@university.edu"
+                placeholder="e.g. alice@university.edu"
                 className="form-input"
                 value={addForm.email}
                 onChange={(e) => setAddForm({ ...addForm, email: e.target.value })}
@@ -720,7 +860,7 @@ export default function App() {
         </section>
       )}
 
-      {/* TAB 3: REQUEST RECOMMENDATION */}
+      {/* TAB 4: REQUEST RECOMMENDATION */}
       {activeTab === 'request' && (
         <section className="card" style={{ maxWidth: '600px', margin: '0 auto' }}>
           <h2 className="card-title">
@@ -728,7 +868,7 @@ export default function App() {
             Request Letter of Recommendation
           </h2>
           <p className="card-desc">
-            Submit a formal recommendation request for a registered student ID to authorized faculty.
+            Submit a recommendation request for your registered student record. Must be submitted by the wallet that registered the student.
           </p>
 
           <div className="form-group">
@@ -778,7 +918,7 @@ export default function App() {
         </section>
       )}
 
-      {/* TAB 4: APPROVE RECOMMENDATION */}
+      {/* TAB 5: APPROVE RECOMMENDATION */}
       {activeTab === 'approve' && (
         <section className="card" style={{ maxWidth: '650px', margin: '0 auto' }}>
           <h2 className="card-title">
@@ -786,7 +926,7 @@ export default function App() {
             Approve Letter of Recommendation
           </h2>
           <p className="card-desc">
-            Faculty approvers and the contract owner can review pending requests and approve recommendations with optional IPFS document links.
+            Faculty approvers and the contract owner can review pending requests and approve recommendations.
           </p>
 
           {!isApprover && (
@@ -830,25 +970,17 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Recommendation Remarks / LoR Text (Bonus)</label>
-              <textarea
-                rows={3}
-                placeholder="e.g. Highly recommend this student for their outstanding academic merit and web3 engineering expertise."
-                className="form-textarea"
-                value={approveForm.customNote}
-                onChange={(e) => setApproveForm({ ...approveForm, customNote: e.target.value })}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">IPFS CID / Document Link (Bonus Optional)</label>
+              <label className="form-label">IPFS CID / Document Hash (Optional Bonus)</label>
               <input
                 type="text"
-                placeholder="e.g. ipfs://QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco"
+                placeholder="e.g. QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco or ipfs://Qm..."
                 className="form-input mono"
                 value={approveForm.ipfsHash}
                 onChange={(e) => setApproveForm({ ...approveForm, ipfsHash: e.target.value })}
               />
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                Optionally paste an IPFS CID if the recommendation document has been uploaded to IPFS. Leave blank for standard on-chain approval.
+              </p>
             </div>
 
             <button
@@ -858,13 +990,13 @@ export default function App() {
               disabled={loading || !approveForm.studentId || !isApprover || !account}
             >
               {loading ? <div className="spinner" /> : <Award size={16} />}
-              Approve & Issue LoR On-Chain
+              Approve LoR On-Chain
             </button>
           </form>
         </section>
       )}
 
-      {/* TAB 5: ADMIN & APPROVER MANAGEMENT (OWNER ONLY) */}
+      {/* TAB 6: ADMIN & APPROVER MANAGEMENT (OWNER ONLY) */}
       {activeTab === 'admin' && isOwner && (
         <section className="card" style={{ maxWidth: '650px', margin: '0 auto' }}>
           <h2 className="card-title">
@@ -957,14 +1089,14 @@ export default function App() {
               <div>
                 <p style={{ color: 'var(--text-muted)' }}>Student ID: #{selectedStudentForCert.id}</p>
                 <p style={{ color: 'var(--text-dim)', fontSize: '0.75rem' }}>
-                  Student Wallet: {selectedStudentForCert.studentAddress.slice(0, 10)}...
+                  Student Wallet: {selectedStudentForCert.studentAddress ? `${selectedStudentForCert.studentAddress.slice(0, 10)}...` : 'N/A'}
                 </p>
               </div>
 
               <div style={{ textAlign: 'right' }}>
                 <p style={{ color: '#34d399', fontWeight: 600 }}>✓ Verified By Authorized Faculty</p>
                 <p style={{ color: 'var(--text-dim)', fontSize: '0.75rem' }}>
-                  Signer: {selectedStudentForCert.approvedBy.slice(0, 10)}...{selectedStudentForCert.approvedBy.slice(-6)}
+                  Signer: {selectedStudentForCert.approvedBy ? `${selectedStudentForCert.approvedBy.slice(0, 10)}...${selectedStudentForCert.approvedBy.slice(-6)}` : 'N/A'}
                 </p>
               </div>
             </div>
