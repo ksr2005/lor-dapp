@@ -1,8 +1,8 @@
 {
-  "network": "hardhat",
-  "chainId": "31337",
-  "contractAddress": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
-  "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-  "transactionHash": "0xabae4444f72eaac0fb4876ec6ed3b19ca57f606c50852d07a214a8f4bc19efde",
-  "deployedAt": "2026-11-07T12:20:38.353Z"
+  "network": "sepolia",
+  "chainId": "11155111",
+  "contractAddress": "0x090912b54A19fD1Ac1290d358daf5D807e451380",
+  "deployer": "0x638c28b497466d4476dc75D962b120Cb23Bc6f55",
+  "transactionHash": "0x4b865aa1cc532be7b4f2f0fcc197d6b3dc52e8f103c52654ea906d34b485039d",
+  "deployedAt": "2026-11-20T07:17:50.775Z"
 }

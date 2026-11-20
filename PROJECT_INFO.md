@@ -10,6 +10,8 @@
 - **Supported Networks:**
   - Localhost / Hardhat Node (`chainId: 31337`)
   - Ethereum Sepolia Testnet (`chainId: 11155111`)
+- **Deployed Sepolia Contract Address:** [`0x090912b54A19fD1Ac1290d358daf5D807e451380`](https://sepolia.etherscan.io/address/0x090912b54A19fD1Ac1290d358daf5D807e451380)
+- **Deployment Transaction Hash:** `0x4b865aa1cc532be7b4f2f0fcc197d6b3dc52e8f103c52654ea906d34b485039d`
 
 ---
 
@@ -164,3 +166,4 @@ npm test
 | `README.md` | General project documentation |
 | `PROJECT_INFO.md` | Comprehensive technical specification and guide |
 | `screenshots/` | Directory for submission screenshots |
+

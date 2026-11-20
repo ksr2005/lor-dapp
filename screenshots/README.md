@@ -21,3 +21,4 @@ Place your real browser & Etherscan screenshots in this folder:
 
 6. `06_verified_lor_certificate.png`:
    - Screenshot of clicking "View LoR" to display the cryptographic on-chain Letter of Recommendation modal.
+

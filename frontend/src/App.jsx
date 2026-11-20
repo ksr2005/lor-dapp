@@ -176,8 +176,27 @@ export default function App() {
   useEffect(() => {
     if (contract && account) {
       refreshData();
+    } else if (!contract && contractAddress && defaultDeployment.network === 'sepolia') {
+      // Fallback read-only provider to display on-chain Sepolia data immediately
+      const readOnlyProvider = new ethers.JsonRpcProvider('https://ethereum-sepolia-rpc.publicnode.com');
+      const readContract = new ethers.Contract(contractAddress, LoRArtifact.abi, readOnlyProvider);
+      readContract.getAllStudents().then((raw) => {
+        const formatted = raw.map((s) => ({
+          id: Number(s.id),
+          name: s.name,
+          course: s.course,
+          email: s.email,
+          studentAddress: s.studentAddress,
+          status: Number(s.status),
+          approvedBy: s.approvedBy,
+          ipfsHash: s.ipfsHash,
+          requestedAt: Number(s.requestedAt),
+          approvedAt: Number(s.approvedAt),
+        }));
+        setStudents(formatted);
+      }).catch((e) => console.log('Read-only fetch notice:', e.message));
     }
-  }, [contract, account, refreshData]);
+  }, [contract, account, contractAddress, refreshData]);
 
   // Listen to MetaMask account / network events
   useEffect(() => {

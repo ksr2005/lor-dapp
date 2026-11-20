@@ -204,19 +204,33 @@ Open `http://localhost:3000` in your browser.
 
 ---
 
-## 📸 Screenshots & Submission Guidelines
+## 📸 Screenshots & Submission Gallery
 
-Store your actual screenshots inside the [`screenshots/`](screenshots/) directory:
-1. `01_contract_sepolia_etherscan.png`: Etherscan page of the deployed & verified contract on Sepolia.
-2. `02_frontend_all_students.png`: Frontend dashboard showing registered students and statuses.
-3. `03_frontend_add_student.png`: Add Student form with MetaMask transaction.
-4. `04_frontend_lookup_student.png`: On-chain result from `getStudent(id)`.
-5. `05_frontend_approve_lor.png`: Faculty approving recommendation.
-6. `06_verified_lor_certificate.png`: Verified on-chain LoR certificate modal.
+All genuine screenshots of the live deployed contract and running React DApp are stored in [`screenshots/`](screenshots/):
+
+| Screenshot | Description |
+|---|---|
+| ![Sepolia Etherscan](screenshots/01_contract_sepolia_etherscan.png) | **Contract Deployed on Sepolia**: Live Etherscan page at `0x090912b54A19fD1Ac1290d358daf5D807e451380` showing deployment & transaction history. |
+| ![Frontend All Students](screenshots/02_frontend_all_students.png) | **Running Frontend Dashboard**: Real-time table displaying on-chain registered students loaded directly from Sepolia. |
+| ![Lookup Student](screenshots/03_frontend_lookup_student.png) | **Student Lookup (`getStudent`)**: On-chain query returning full student tuple with ID, name, course, status, approver, and IPFS hash. |
+| ![Add Student UI](screenshots/04_frontend_add_student.png) | **Add Student Form**: Registering new student details on-chain. |
+| ![Approve LoR UI](screenshots/05_frontend_approve_lor.png) | **Approve LoR (Faculty Mode)**: Approver reviewing requests and attaching decentralized IPFS CIDs. |
+| ![Verified Certificate](screenshots/06_verified_lor_certificate.png) | **Verified On-Chain LoR Certificate**: Cryptographic certificate modal with student record and faculty signature. |
+
+---
+
+## 📤 Submission Info
+
+- **Deployed Contract Address (Sepolia):** [`0x090912b54A19fD1Ac1290d358daf5D807e451380`](https://sepolia.etherscan.io/address/0x090912b54A19fD1Ac1290d358daf5D807e451380)
+- **Deployment Transaction Hash:** `0x4b865aa1cc532be7b4f2f0fcc197d6b3dc52e8f103c52654ea906d34b485039d`
+- **Author:** Sriharsha (`ksr2005`)
+- **Main Commit / PR:** `Sriharsha - LoR DApp`
+- **Network:** Ethereum Sepolia Testnet (Chain ID `11155111`) & Localhost (`31337`)
+- **Compiler Target:** Solidity `0.8.24` (EVM target: `paris`)
 
 ### Git Submission
 ```bash
 git add .
-git commit -m "<YourName> - LoR DApp"
+git commit -m "Sriharsha - LoR DApp"
 git push origin main
 ```
